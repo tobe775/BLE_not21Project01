@@ -47,7 +47,7 @@ public class BLECentralManager {
 
     // Connect Device
     private BluetoothGatt mGatt = null;
-    private BluetoothGattCharacteristic characteristic = null;
+    private BluetoothGattCharacteristic mBluetoothGattCharacteristic = null;
 
 
     public BLECentralManager(Context context, onCentraListener listener) {
@@ -102,6 +102,9 @@ public class BLECentralManager {
     }
 
     public void readCharacteristic() {
+        BluetoothGattCharacteristic characteristic = null;
+        characteristic = createCharacter();
+        characteristic.setValue("!!");
         if (mGatt.readCharacteristic(characteristic)) {
             Log.d(TAG, "readCharacteristic success ");
         } else {
@@ -110,11 +113,45 @@ public class BLECentralManager {
     }
 
     public void writeCharacteristic() {
-        if (mGatt.writeCharacteristic(characteristic)) {
-            Log.d(TAG, "writeCharacteristic success ");
-        } else {
-            Log.d(TAG, "writeCharacteristic failed");
+        BluetoothGattCharacteristic characteristic = null;
+        characteristic = createCharacter();
+
+        if (characteristic != null) {
+            characteristic.setValue("Hello Server".getBytes());
+            if (mGatt.writeCharacteristic(characteristic)) {
+                Log.d(TAG, "writeCharacteristic success ");
+            } else {
+                Log.d(TAG, "writeCharacteristic failed");
+            }
         }
+    }
+
+    private BluetoothGattCharacteristic createCharacter() {
+        BluetoothGattService nameService = null;
+        BluetoothGattCharacteristic characteristic = null;
+
+        nameService = mGatt.getService(UUID.fromString(Info.UUID_SAMPLE_NAME_SERVICE));
+
+        if (nameService == null) {
+            Log.d(TAG, "nameservice not found...");
+            return null;
+        }
+
+        characteristic = nameService.getCharacteristic(UUID.fromString(Info.UUID_SAMPLE_NAME_CHARACTERISTIC));
+        if (characteristic == null) {
+            Log.d(TAG, "characteristic not found...");
+            return null;
+        }
+
+        byte[] value = {0x00, (byte) (0xB9) , 0x0D, (byte) (0x90), 0x2F};
+        if(!characteristic.setValue(value)){
+            Log.d(TAG, "Couldn't set characteristic's local value");
+        }
+
+        characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+
+
+        return characteristic;
     }
 
 
@@ -151,29 +188,12 @@ public class BLECentralManager {
             super.onServicesDiscovered(gatt, status);
             Log.d(TAG, "onServicesDiscovered");
 
-            BluetoothGattService nameService = gatt.getService(UUID.fromString(Info.UUID_SAMPLE_NAME_SERVICE));
-
-            if (nameService == null) {
-                Log.d(TAG, "nameservice not found...");
-                return;
-            }
-
-            characteristic = nameService.getCharacteristic(UUID.fromString(Info.UUID_SAMPLE_NAME_CHARACTERISTIC));
-            if (characteristic == null) {
-                Log.d(TAG, "characteristic not found...");
-                return;
-            }
-
-            if (gatt.readCharacteristic(characteristic)) {
-                Log.d(TAG, "readCharacteristic success ");
-            } else {
-                Log.d(TAG, "readCharacteristic failed");
-            }
+            readCharacteristic();
             mGatt = gatt;
         }
 
         @Override
-        public void onCharacteristicRead(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic, final int status) {
+        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic,  int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
             Log.d(TAG, "OUT_onCharacteristicRead");
 
@@ -181,11 +201,12 @@ public class BLECentralManager {
         }
 
         @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic, int status) {
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicWrite(gatt, characteristic, status);
-            Log.d(TAG, "OUT_onCharacteristicWrite");
+            Log.d(TAG, "OUT_onCharacteristicWrite ");
 
-            mListener.onCharacteristicWrite(characteristic.getStringValue(0));
+
+            mListener.onCharacteristicWrite(new String(characteristic.getStringValue(0)));
         }
 
         @Override
