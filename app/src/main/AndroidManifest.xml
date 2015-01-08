@@ -22,7 +22,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ConnectDevice"
+            android:name=".ConnectActivity"
             android:label="@string/app_name" />
     </application>
 

@@ -10,26 +10,43 @@
         android:orientation="horizontal">
 
         <Button
-            android:layout_weight="1"
             android:id="@+id/bt_connect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="Connect"/>
 
         <Button
-            android:layout_weight="1"
             android:id="@+id/bt_disconnect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="Disconnect"/>
 
     </LinearLayout>
 
-    <Button
-        android:id="@+id/bt_send"
-        android:text="Send Data"
+
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/bt_read"
+            android:layout_weight="1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Send Data"/>
+
+        <Button
+            android:id="@+id/bt_write"
+            android:layout_weight="1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Send Data"/>
+
+    </LinearLayout>
+
 
     <ListView
         android:id="@+id/lv_info"

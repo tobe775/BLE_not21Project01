@@ -9,7 +9,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.ActionBarActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
@@ -19,35 +18,39 @@ import android.widget.Toast;
 
 public class MainActivity extends ActionBarActivity implements View.OnClickListener, AdapterView.OnItemClickListener {
 
+    private final String TAG = "MainActivity";
+
     // Regular
     private Handler mHandler = null;
 
     // BLE
     private BluetoothAdapter mAdapter = null;
     private BluetoothManager mManager = null;
-    private BluetoothAdapter.LeScanCallback mLeScanCallback = null;
     private boolean mScanning = true;
 
-    private static final long SCAN_PERIOD = 1000;
+    private final long SCAN_PERIOD = 1000;
 
     // Layout
     private Button bt_scan = null;
     private ListView lv_list = null;
     private LeDeviceListAdapter mLeDeviceListAdapter = null;
 
-    public final static String DEVICE_NAME ="device";
-    public final static String DEVICE_ADDRESS ="address";
+    public final static String DEVICE_NAME = "device";
+    public final static String DEVICE_ADDRESS = "address";
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mHandler = new Handler();
+
         initLayout();
-        init();
         initBLE();
 
     }
+
 
     private void initLayout() {
         bt_scan = (Button) findViewById(R.id.bt_scan);
@@ -60,12 +63,8 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
 
     }
 
-    private void init() {
-        mHandler = new Handler();
-    }
-
-
     private void initBLE() {
+
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(this, "ble_not_supported", Toast.LENGTH_SHORT).show();
             finish();
@@ -80,77 +79,60 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
             return;
         }
 
-        Toast.makeText(this, "YES", Toast.LENGTH_SHORT).show();
         for (BluetoothDevice device : mAdapter.getBondedDevices()) {
             mLeDeviceListAdapter.addDevice(device);
         }
+    }
 
-        mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
 
-            @Override
-            public void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
+    private BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
+        @Override
+        public void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    String scanData = String.format("%d bytes / 0x%s", scanRecord.length, toHexString(scanRecord));
 
-                        String scanData = String.format("%d bytes / 0x%s", scanRecord.length,toHexString(scanRecord));
 
-                        Log.d("OUT","Scan Dev => " + device.getName() + " " + scanData);
+                    for (int k = 0; k > scanRecord.length; k++) {
+                        System.out.printf("%02x", scanRecord[k]);
+                    }
+                    synchronized (this) {
 
-                        for(int k=0;k>scanRecord.length;k++){
-                            System.out.printf("%02x", scanRecord[k]);
-                        }
                         mLeDeviceListAdapter.addDevice(device);
                         mLeDeviceListAdapter.notifyDataSetChanged();
                     }
-                });
-            }
-        };
-    }
+                }
+            });
 
-    private void scanLeDevice(final boolean enable) {
+            String scanData = String.format("%d bytes / 0x%s", scanRecord.length, toHexString(scanRecord));
+
+
+            for (int k = 0; k > scanRecord.length; k++) {
+                System.out.printf("%02x", scanRecord[k]);
+            }
+
+        }
+    };
+
+    synchronized private void scanLeDevice(boolean enable) {
         if (enable) {
             // Stops scanning after a pre-defined scan period.
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    mScanning = false;
+                    mScanning = true;
                     mAdapter.stopLeScan(mLeScanCallback);
                     invalidateOptionsMenu();
                 }
             }, SCAN_PERIOD);
 
-            mScanning = true;
+            mScanning = false;
             mAdapter.startLeScan(mLeScanCallback);
         } else {
-            mScanning = false;
+            mScanning = true;
             mAdapter.stopLeScan(mLeScanCallback);
         }
-    }
-
-
-    @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.bt_scan:
-                scanLeDevice(mScanning);
-                break;
-        }
-    }
-
-    @Override
-    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-
-
-        scanLeDevice(mScanning);
-
-        BluetoothDevice device = mLeDeviceListAdapter.getDevice(position);
-
-        Intent intent = new Intent(this,ConnectDevice.class);
-
-        Info.CON_DEVICE_ADDRESS = device.getAddress();
-        Info.CON_DEVICE_NAME = device.getName();
-        startActivity(intent);
     }
 
     public static String toHexString(byte[] buffer) {
@@ -166,4 +148,23 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         return result.toString();
     }
 
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.bt_scan:
+                scanLeDevice(mScanning);
+                break;
+        }
+    }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        Intent intent = null;
+
+        intent = new Intent(this, ConnectActivity.class);
+        Info.CON_DEVICE_ADDRESS = mLeDeviceListAdapter.getDevice(position).getAddress();
+        Info.CON_DEVICE_NAME = mLeDeviceListAdapter.getDevice(position).getName();
+
+        startActivity(intent);
+    }
 }
